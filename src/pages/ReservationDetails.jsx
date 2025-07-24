@@ -1,14 +1,42 @@
-
-// ReservationDetails.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Mail, Phone, Users, AlertCircle, FileText } from 'lucide-react';
+
+import {
+  Box,
+  Typography,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  CircularProgress,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Divider,
+  Alert,
+  IconButton,
+  Modal,
+  Stack,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl
+} from '@mui/material';
+
+import {
+  ArrowBack,
+  CalendarToday,
+  Email,
+  Phone,
+  Error as ErrorIcon,
+  PersonAdd
+} from '@mui/icons-material';
 
 export default function ReservationDetails() {
   const { id } = useParams();
@@ -18,27 +46,37 @@ export default function ReservationDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [showModal, setShowModal] = useState(false);
+  const [guestForm, setGuestForm] = useState({
+    first_name: '',
+    last_name: '',
+    date_of_birth: '',
+    country_of_residency: '',
+    nationality: '',
+    id_type: 'Passport',     
+    id_number: '',
+    id_issued_by: ''
+  });
+
   useEffect(() => {
     const fetchReservationData = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const token = localStorage.getItem('token');
         if (!token) return navigate('/login');
 
-        const [reservationResponse, guestsResponse] = await Promise.all([
-          axios.get(`http://localhost:3001/api/reservations/${id}`, {
+        const [resData, guestData] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/reservations/${id}`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get(`http://localhost:3001/api/guests?reservationId=${id}`, {
+          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests?reservationId=${id}`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
 
-        setReservation(reservationResponse.data);
-        setGuests(guestsResponse.data);
+        setReservation(resData.data);
+        setGuests(guestData.data);
       } catch (err) {
-        setError('Failed to load reservation details. Please try again.');
+        setError('Failed to load reservation details.');
       } finally {
         setLoading(false);
       }
@@ -55,170 +93,303 @@ export default function ReservationDetails() {
       day: 'numeric'
     });
 
-  const formatDateOfBirth = (dateString) =>
+  const formatDOB = (dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
 
+  const calculateNights = (checkIn, checkOut) => {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  };
+
+  const handleGuestChange = (e) => {
+    setGuestForm({ ...guestForm, [e.target.name]: e.target.value });
+  };
+
+  const handleGuestSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/guests`,
+        { ...guestForm, reservation_id: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setShowModal(false);
+      setGuestForm({
+        first_name: '',
+        last_name: '',
+        date_of_birth: '',
+        country_of_residency: '',
+        nationality: '',
+        id_type: 'Passport',
+        id_number: '',
+        id_issued_by: ''
+      });
+      const guestRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests?reservationId=${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setGuests(guestRes.data);
+    } catch (err) {
+      alert('Failed to add guest: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading reservation details...</p>
-        </div>
-      </div>
+      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error || !reservation) {
     return (
-      <div className="bg-gray-50 min-h-screen py-8">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 hover:bg-gray-100">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-
-          <Card className="max-w-md mx-auto">
-            <CardContent className="flex items-center p-6">
-              <AlertCircle className="h-8 w-8 text-red-500 mr-3" />
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Error</h3>
-                <p className="text-gray-600 text-sm">{error || 'Reservation not found'}</p>
-                <Button onClick={() => window.location.reload()} className="mt-3" size="sm">
-                  Try Again
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <Container maxWidth="sm" sx={{ py: 6 }}>
+        <Alert severity="error" icon={<ErrorIcon />}>
+          {error || 'Reservation not found.'}
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container mx-auto px-4 max-w-4xl space-y-8">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="hover:bg-gray-100 flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Reservations
-        </Button>
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      <Box mb={3}>
+        <IconButton onClick={() => navigate(-1)} size="small" sx={{ mb: 1 }}>
+          <ArrowBack fontSize="small" />
+        </IconButton>
+        <Typography variant="h5" fontWeight={600}>
+          {reservation.name || `Reservation #${reservation.reservation_code}`}
+        </Typography>
+      </Box>
 
-        {/* Reservation Details */}
-        <Card className="shadow-sm border bg-white">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Calendar className="h-6 w-6 text-blue-600" />
-              <CardTitle className="text-xl font-semibold text-gray-900">
-                Reservation #{reservation.reservation_code}
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <Separator />
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Check-in Date</p>
-                    <p className="text-gray-700">{formatDate(reservation.check_in_date)}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Check-out Date</p>
-                    <p className="text-gray-700">{formatDate(reservation.check_out_date)}</p>
-                  </div>
-                </div>
-              </div>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={8}>
+              <Card>
+                <CardHeader title="Stay Details" />
+                <Divider />
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box display="flex" gap={2} alignItems="center">
+                        <CalendarToday color="primary" />
+                        <Box>
+                          <Typography variant="subtitle2">Check-in</Typography>
+                          <Typography>{formatDate(reservation.check_in_date)}</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Box display="flex" gap={2} alignItems="center">
+                        <CalendarToday color="error" />
+                        <Box>
+                          <Typography variant="subtitle2">Check-out</Typography>
+                          <Typography>{formatDate(reservation.check_out_date)}</Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-gray-400 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Contact Email</p>
-                    <p className="text-gray-700">{reservation.contact_email}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Phone className="h-5 w-5 text-gray-400 mt-1" />
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Contact Phone</p>
-                    <p className="text-gray-700">{reservation.contact_phone}</p>
-                  </div>
-                </div>
-              </div>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%' }}>
+                <CardHeader title="Special Requests" />
+                <Divider />
+                <CardContent>
+                  {reservation.special_requests ? (
+                    <Typography>{reservation.special_requests}</Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      None
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
-              <div className="md:col-span-2 pt-2">
-                <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-gray-400 mt-1" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 mb-2">Special Requests</p>
-                    {reservation.special_requests ? (
-                      <Badge variant="outline" className="py-1 px-3 text-sm">
-                        {reservation.special_requests}
-                      </Badge>
-                    ) : (
-                      <p className="text-gray-500 italic">No special requests</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Card sx={{ mt: 4 }}>
+            <CardHeader title="Contact Info" />
+            <Divider />
+            <CardContent>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Box display="flex" gap={2} alignItems="center">
+                    <Email color="primary" />
+                    <Box>
+                      <Typography variant="subtitle2">Email</Typography>
+                      <Typography>{reservation.contact_email}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box display="flex" gap={2} alignItems="center">
+                    <Phone color="primary" />
+                    <Box>
+                      <Typography variant="subtitle2">Phone</Typography>
+                      <Typography>{reservation.contact_phone}</Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
-        {/* Guest List */}
-        <Card className="shadow-sm border bg-white">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Users className="h-6 w-6 text-blue-600" />
-              <CardTitle className="text-lg font-medium text-gray-800">
-                Guest List ({guests.length} {guests.length === 1 ? 'guest' : 'guests'})
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <Separator />
-          <CardContent className="p-6">
-            {guests.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">No guests registered for this reservation</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-full text-sm">
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold text-gray-700">Full Name</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Date of Birth</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Nationality</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Passport Number</TableHead>
+          <Card sx={{ mt: 4 }}>
+            <CardHeader
+              title={`Guest List (${guests.length})`}
+              action={
+                <IconButton onClick={() => setShowModal(true)}>
+                  <PersonAdd />
+                </IconButton>
+              }
+            />
+            <Divider />
+            <CardContent>
+              {guests.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No guests registered for this reservation.
+                </Typography>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Full Name</TableCell>
+                      <TableCell>DOB</TableCell>
+                      <TableCell>Residency</TableCell>
+                      <TableCell>Nationality</TableCell>
+                      <TableCell>Document Type</TableCell>
+                      <TableCell>Document Number</TableCell>
+                      <TableCell>Issued By</TableCell>
                     </TableRow>
-                  </TableHeader>
+                  </TableHead>
                   <TableBody>
                     {guests.map((guest) => (
-                      <TableRow key={guest.id} className="hover:bg-gray-50 cursor-pointer">
-                        <TableCell className="font-medium text-gray-900">
-                          {guest.first_name} {guest.last_name}
-                        </TableCell>
-                        <TableCell>{formatDateOfBirth(guest.date_of_birth)}</TableCell>
+                      <TableRow key={guest.id}>
+                        <TableCell>{guest.first_name} {guest.last_name}</TableCell>
+                        <TableCell>{formatDOB(guest.date_of_birth)}</TableCell>
+                        <TableCell>{guest.country_of_residency}</TableCell>
                         <TableCell>{guest.nationality}</TableCell>
-                        <TableCell className="font-mono text-sm">{guest.passport_number}</TableCell>
+                        <TableCell>{guest.id_type}</TableCell>          
+                        <TableCell>{guest.id_number}</TableCell>       
+                        <TableCell>{guest.id_issued_by}</TableCell>     
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+        <Card sx={{ backgroundColor: '#f9f9f9' }}>
+          <CardHeader title="Reservation Summary" />
+          <Divider />
+          <CardContent>
+            <Typography variant="subtitle2" gutterBottom>
+              {calculateNights(reservation.check_in_date, reservation.check_out_date)} nights stay
+            </Typography>
+            {reservation.name && (
+              <>
+                <Typography variant="subtitle2">Name:</Typography>
+                <Typography>{reservation.name}</Typography>
+              </>
             )}
+            {reservation.house?.name && (
+              <>
+                <Typography variant="subtitle2">House:</Typography>
+                <Typography>{reservation.house.name}</Typography>
+              </>
+            )}
+
+            {/* ✅ Moved inside and added spacing */}
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              sx={{ mt: 3 }}
+              onClick={() => {
+                const encodedCode = btoa(reservation.reservation_code); // base64 encode
+                const url = `${import.meta.env.VITE_GUEST_FORM_BASE_URL}/?k=${encodeURIComponent(encodedCode)}&house=${reservation.house_id}`;
+                navigator.clipboard.writeText(url)
+                  .then(() => alert('Link copied to clipboard!'))
+                  .catch(() => alert('Failed to copy link.'));
+              }}
+            >
+              Copy Guest Link
+            </Button>
           </CardContent>
         </Card>
-      </div>
-    </div>
+
+        </Grid>
+      </Grid>
+
+      {/* Guest Modal */}
+      <Modal open={showModal} onClose={() => setShowModal(false)}>
+        <Box
+          component="form"
+          onSubmit={handleGuestSubmit}
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            bgcolor: 'background.paper',
+            p: 4,
+            borderRadius: 2,
+            boxShadow: 24,
+            width: 400
+          }}
+        >
+          <Typography variant="h6" mb={2}>
+            Add Guest
+          </Typography>
+          <Stack spacing={2}>
+            <TextField name="first_name" label="First Name" required onChange={handleGuestChange} />
+            <TextField name="last_name" label="Last Name" required onChange={handleGuestChange} />
+           <TextField
+              name="date_of_birth"
+              label="Date of Birth"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              required
+              value={guestForm.date_of_birth?.split('T')[0] || ''} // 👈 format correctly
+              onChange={handleGuestChange}
+            />
+
+            <TextField name="country_of_residency" label="Country of Residency" onChange={handleGuestChange} />
+            <TextField name="nationality" label="Nationality" onChange={handleGuestChange} />
+            <FormControl fullWidth>
+            <InputLabel>Document Type</InputLabel>
+            <Select
+              name="id_type"                   // ✅ was: document_type
+              value={guestForm.id_type}
+              label="Document Type"
+              onChange={handleGuestChange}
+            >
+              <MenuItem value="passport">Passport</MenuItem>
+              <MenuItem value="national_id">National ID</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField name="id_number" label="Document Number" onChange={handleGuestChange} />
+          <TextField name="id_issued_by" label="Issued By" onChange={handleGuestChange} />
+            <Button type="submit" variant="contained" fullWidth>
+              Save
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
+    </Container>
   );
 }

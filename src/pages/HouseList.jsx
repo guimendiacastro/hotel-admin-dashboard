@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react';
-import { getHouses } from '../api/api';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { getHouses } from '../api/api';
 
-function HouseList() {
+import {
+  Box,
+  Container,
+  Grid,
+  Typography,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+  Button,
+  Stack
+} from '@mui/material';
+
+export default function HouseList() {
   const [houses, setHouses] = useState([]);
   const navigate = useNavigate();
 
@@ -12,41 +23,53 @@ function HouseList() {
     const fetchData = async () => {
       const token = localStorage.getItem('token');
       const { data } = await getHouses(token);
+      console.log('Fetched houses:', data);
       setHouses(data);
     };
     fetchData();
   }, []);
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10 px-4">
-      <div className="container mx-auto max-w-6xl space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-2xl font-semibold text-gray-900">All Houses</h1>
-          <Button onClick={() => navigate('/create-house')}>Add New House</Button>
-        </div>
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={2}
+        mb={4}
+      >
+        <Typography variant="h5" fontWeight={600}>
+          All Houses
+        </Typography>
+        <Button variant="contained" onClick={() => navigate('/create-house')}>
+          Add New House
+        </Button>
+      </Stack>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {houses.map((house) => (
-            <Card
-              key={house.id}
-              className="overflow-hidden hover:shadow-md transition cursor-pointer"
-              onClick={() => navigate(`/houses/${house.id}`)}
-            >
-              <img
-                src={house.primary_image_url}
-                alt={house.name}
-                className="w-full h-48 object-cover"
-              />
-              <CardContent className="p-4">
-                <CardTitle className="text-lg font-semibold text-gray-900">{house.name}</CardTitle>
-                <p className="text-sm text-gray-500 mt-1">{house.address}</p>
-              </CardContent>
+      <Grid container spacing={4}>
+        {houses.map((house) => (
+          <Grid item key={house.id} xs={12} sm={6} md={4}>
+            <Card elevation={3}>
+              <CardActionArea onClick={() => navigate(`/houses/${house.id}`)}>
+                <CardMedia
+                  component="img"
+                  height="180"
+                  image={house.primary_image_url || 'https://via.placeholder.com/400x300'}
+                  alt={house.name}
+                />
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {house.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {house.address}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
             </Card>
-          ))}
-        </div>
-      </div>
-    </div>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }
-
-export default HouseList;

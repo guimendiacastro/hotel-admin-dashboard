@@ -7,6 +7,7 @@ import CreateReservation from './pages/CreateReservation';
 import LoginPage from './pages/LoginPage';
 import ReservationList from './pages/ReservationList';
 import ReservationDetails from './pages/ReservationDetails';
+import RegisterPage from './pages/RegisterPage';
 
 
 
@@ -22,6 +23,7 @@ function App() {
         <Route path="/create-house" element={<CreateHouse />} />
         <Route path="/create-reservation" element={<CreateReservation />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/reservations/:id" element={<ReservationDetails />} />
       </Routes>
     </Router>

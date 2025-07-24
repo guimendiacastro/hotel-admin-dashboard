@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Container,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
+  Button,
+  MenuItem,
+  Box,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+
 
 function CreateReservation() {
   const [houses, setHouses] = useState([]);
   const [form, setForm] = useState({
+    name: '',
     house_id: '',
     reservation_code: '',
     check_in_date: '',
@@ -19,14 +30,21 @@ function CreateReservation() {
     status: 'confirmed'
   });
   const [message, setMessage] = useState('');
+  const [error, setError] = useState(false);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     const fetchHouses = async () => {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get('http://localhost:3001/api/houses', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setHouses(data);
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/houses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setHouses(data);
+      } catch (err) {
+        setError(true);
+      }
     };
     fetchHouses();
   }, []);
@@ -39,48 +57,140 @@ function CreateReservation() {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      await axios.post('http://localhost:3001/api/reservations', form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessage('Reservation created successfully!');
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reservations`, form, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setMessage('Reservation created successfully!');
+    setError(false);
+
+    // Wait 1 second before navigating to give user feedback
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
     } catch (err) {
-      setMessage('Error: ' + (err.response?.data?.error || err.message));
+      setMessage(err.response?.data?.error || 'Something went wrong');
+      setError(true);
     }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-12 px-4">
-      <div className="max-w-xl mx-auto">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Create Reservation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <select
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Card elevation={3}>
+        <CardHeader
+          title={
+            <Typography variant="h5" fontWeight={600}>
+              Create Reservation
+            </Typography>
+          }
+        />
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <Box display="flex" flexDirection="column" gap={3}>
+              <TextField
+                select
                 name="house_id"
+                label="House"
+                value={form.house_id}
                 onChange={handleChange}
                 required
-                className="w-full border px-3 py-2 rounded"
+                fullWidth
               >
-                <option value="">Select a House</option>
-                {houses.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
+                <MenuItem value="">Select a house</MenuItem>
+                {houses.map((house) => (
+                  <MenuItem key={house.id} value={house.id}>
+                    {house.name}
+                  </MenuItem>
                 ))}
-              </select>
-              <Input name="reservation_code" placeholder="Reservation Code" onChange={handleChange} required />
-              <Input name="check_in_date" type="date" onChange={handleChange} required />
-              <Input name="check_out_date" type="date" onChange={handleChange} required />
-              <Input name="contact_email" placeholder="Contact Email" onChange={handleChange} />
-              <Input name="contact_phone" placeholder="Contact Phone" onChange={handleChange} />
-              <Textarea name="special_requests" placeholder="Special Requests" onChange={handleChange} />
-              <Button type="submit" className="w-full">Create</Button>
-            </form>
-            {message && <p className="mt-4 text-sm text-center text-blue-600">{message}</p>}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              </TextField>
+
+              <TextField
+                label="Reservation Name"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                label="Reservation Code"
+                name="reservation_code"
+                value={form.reservation_code}
+                onChange={handleChange}
+                required
+                fullWidth
+              />
+
+              <TextField
+                label="Check-In Date"
+                name="check_in_date"
+                type="date"
+                value={form.check_in_date}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+                fullWidth
+              />
+
+              <TextField
+                label="Check-Out Date"
+                name="check_out_date"
+                type="date"
+                value={form.check_out_date}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+                fullWidth
+              />
+
+              <TextField
+                label="Contact Email"
+                name="contact_email"
+                type="email"
+                value={form.contact_email}
+                onChange={handleChange}
+                fullWidth
+              />
+
+              <TextField
+                label="Contact Phone"
+                name="contact_phone"
+                value={form.contact_phone}
+                onChange={handleChange}
+                fullWidth
+              />
+
+              <TextField
+                label="Special Requests"
+                name="special_requests"
+                value={form.special_requests}
+                onChange={handleChange}
+                multiline
+                rows={3}
+                fullWidth
+              />
+
+              <Button type="submit" variant="contained" fullWidth>
+                Create Reservation
+              </Button>
+            </Box>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Snackbar
+        open={!!message}
+        autoHideDuration={4000}
+        onClose={() => setMessage('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setMessage('')}
+          severity={error ? 'error' : 'success'}
+          sx={{ width: '100%' }}
+        >
+          {message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
 

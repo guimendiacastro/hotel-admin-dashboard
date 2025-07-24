@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Container,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
+  Button,
+  Snackbar,
+  Alert,
+  Box
+} from '@mui/material';
 
 function CreateHouse() {
   const [form, setForm] = useState({
@@ -13,6 +22,7 @@ function CreateHouse() {
     capacity: ''
   });
   const [message, setMessage] = useState('');
+  const [error, setError] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,36 +32,92 @@ function CreateHouse() {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      await axios.post('http://localhost:3001/api/houses', form, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/houses`, form, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMessage('House created successfully!');
+      setError(false);
     } catch (err) {
-      setMessage('Error: ' + (err.response?.data?.error || err.message));
+      setMessage(err.response?.data?.error || 'Something went wrong');
+      setError(true);
     }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-12 px-4">
-      <div className="max-w-xl mx-auto">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Create New House</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input name="name" placeholder="House Name" onChange={handleChange} required />
-              <Input name="description" placeholder="Description" onChange={handleChange} />
-              <Input name="address" placeholder="Address" onChange={handleChange} />
-              <Input name="primary_image_url" placeholder="Image URL" onChange={handleChange} />
-              <Input name="capacity" placeholder="Capacity" type="number" onChange={handleChange} />
-              <Button type="submit" className="w-full">Create</Button>
-            </form>
-            {message && <p className="mt-4 text-sm text-center text-blue-600">{message}</p>}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Card elevation={3}>
+        <CardHeader
+          title={
+            <Typography variant="h5" fontWeight={600}>
+              Create New House
+            </Typography>
+          }
+        />
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <Box display="flex" flexDirection="column" gap={3}>
+              <TextField
+                name="name"
+                label="House Name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                fullWidth
+              />
+              <TextField
+                name="description"
+                label="Description"
+                value={form.description}
+                onChange={handleChange}
+                multiline
+                rows={3}
+                fullWidth
+              />
+              <TextField
+                name="address"
+                label="Address"
+                value={form.address}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                name="primary_image_url"
+                label="Image URL"
+                value={form.primary_image_url}
+                onChange={handleChange}
+                fullWidth
+              />
+              <TextField
+                name="capacity"
+                label="Capacity"
+                type="number"
+                value={form.capacity}
+                onChange={handleChange}
+                fullWidth
+              />
+              <Button type="submit" variant="contained" fullWidth>
+                Create House
+              </Button>
+            </Box>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Snackbar
+        open={!!message}
+        autoHideDuration={4000}
+        onClose={() => setMessage('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setMessage('')}
+          severity={error ? 'error' : 'success'}
+          sx={{ width: '100%' }}
+        >
+          {message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
 

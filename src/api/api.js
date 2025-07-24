@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:3001/api", // Update if deployed
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`, // ✅ Correct template literal
 });
 
 export const login = (email, password) =>

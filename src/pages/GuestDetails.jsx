@@ -1,47 +1,91 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  Skeleton,
+  Stack,
+  Box
+} from '@mui/material';
 
-function CreateHouse() {
-  const [form, setForm] = useState({
-    name: '',
-    description: '',
-    address: '',
-    primary_image_url: '',
-    capacity: ''
-  });
-  const [message, setMessage] = useState('');
+function GuestDetails() {
+  const { id } = useParams();
+  const [guest, setGuest] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    try {
-      await axios.post('http://localhost:3001/api/houses', form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMessage('House created successfully!');
-    } catch (err) {
-      setMessage('Error: ' + (err.response?.data?.error || err.message));
-    }
-  };
+  useEffect(() => {
+    const fetchGuest = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const selected = data.find(g => g.id === parseInt(id));
+        setGuest(selected);
+      } catch (err) {
+        console.error('Error fetching guest:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGuest();
+  }, [id]);
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create New House</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="name" placeholder="House Name" onChange={handleChange} className="w-full border px-3 py-2 rounded" required />
-        <input name="description" placeholder="Description" onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <input name="address" placeholder="Address" onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <input name="primary_image_url" placeholder="Image URL" onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <input name="capacity" placeholder="Capacity" type="number" onChange={handleChange} className="w-full border px-3 py-2 rounded" />
-        <button className="bg-green-600 text-white py-2 px-4 rounded">Create</button>
-      </form>
-      {message && <p className="mt-4 text-sm text-center text-blue-600">{message}</p>}
-    </div>
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      {loading ? (
+        <Card elevation={3}>
+          <CardContent>
+            <Skeleton height={40} width="60%" />
+            <Stack spacing={2} mt={2}>
+              <Skeleton height={20} />
+              <Skeleton height={20} />
+              <Skeleton height={20} />
+              <Skeleton height={20} />
+              <Skeleton height={20} />
+              <Skeleton height={20} />
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : guest ? (
+        <Card elevation={3}>
+          <CardContent>
+            <Typography variant="h5" fontWeight={600} gutterBottom>
+              Guest Details
+            </Typography>
+
+            <Box mt={2} display="flex" flexDirection="column" gap={1}>
+              <Typography variant="body1">
+                <strong>Name:</strong> {guest.first_name} {guest.last_name}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Date of Birth:</strong> {guest.date_of_birth}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Country of Residency:</strong> {guest.country_of_residency}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Nationality:</strong> {guest.nationality}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Passport Number:</strong> {guest.passport_number}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Issued By:</strong> {guest.passport_issued_by}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      ) : (
+        <Typography align="center" color="text.secondary">
+          Guest not found.
+        </Typography>
+      )}
+    </Container>
   );
 }
 
-export default CreateHouse;
+export default GuestDetails;
