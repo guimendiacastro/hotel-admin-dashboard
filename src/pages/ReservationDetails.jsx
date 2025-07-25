@@ -309,8 +309,14 @@ export default function ReservationDetails() {
               color="primary"
               sx={{ mt: 3 }}
               onClick={() => {
-                const encodedCode = btoa(reservation.reservation_code); // base64 encode
+                if (!reservation?.reservation_code || !reservation?.house_id) {
+                  alert('Missing reservation code or house ID.');
+                  return;
+                }
+
+                const encodedCode = btoa(reservation.reservation_code); // base64 encode the reservation code
                 const url = `${import.meta.env.VITE_GUEST_FORM_BASE_URL}/?k=${encodeURIComponent(encodedCode)}&house=${reservation.house_id}`;
+
                 navigator.clipboard.writeText(url)
                   .then(() => alert('Link copied to clipboard!'))
                   .catch(() => alert('Failed to copy link.'));
@@ -318,6 +324,7 @@ export default function ReservationDetails() {
             >
               Copy Guest Link
             </Button>
+
           </CardContent>
         </Card>
 

@@ -22,7 +22,6 @@ function CreateReservation() {
   const [form, setForm] = useState({
     name: '',
     house_id: '',
-    reservation_code: '',
     check_in_date: '',
     check_out_date: '',
     contact_email: '',
@@ -104,14 +103,7 @@ function CreateReservation() {
                 onChange={handleChange}
                 fullWidth
               />
-              <TextField
-                label="Reservation Code"
-                name="reservation_code"
-                value={form.reservation_code}
-                onChange={handleChange}
-                required
-                fullWidth
-              />
+              
 
               <TextField
                 label="Check-In Date"
