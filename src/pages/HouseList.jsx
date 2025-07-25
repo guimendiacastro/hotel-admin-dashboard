@@ -21,10 +21,12 @@ export default function HouseList() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem('token');
-      const { data } = await getHouses(token);
-      console.log('Fetched houses:', data);
-      setHouses(data);
+      try {
+        const { data } = await getHouses();
+        setHouses(data);
+      } catch (err) {
+        console.error('Failed to fetch houses:', err);
+      }
     };
     fetchData();
   }, []);

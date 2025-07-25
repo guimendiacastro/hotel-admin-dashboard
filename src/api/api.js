@@ -1,23 +1,36 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`, // ✅ Correct template literal
+  baseURL: `${import.meta.env.VITE_API_BASE_URL}/api`,
 });
 
+API.interceptors.request.use(async (config) => {
+  const token = await window.Clerk?.session?.getToken(); // ✅ This gets the Clerk token
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth
 export const login = (email, password) =>
   API.post("/admin/login", { email, password });
 
-export const getGuests = (token) =>
-  API.get("/guests", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+// Houses
+export const getHouses = () => API.get("/houses");
+export const getHouseById = (id) => API.get(`/houses/${id}`);
+export const createHouse = (houseData) => API.post("/houses", houseData);
 
-export const getReservations = (token) =>
-  API.get("/reservations", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+// Reservations
+export const getReservations = (params = {}) =>
+  API.get("/reservations", { params });
+export const getReservationById = (id) => API.get(`/reservations/${id}`);
+export const createReservation = (reservationData) =>
+  API.post("/reservations", reservationData);
 
-export const getHouses = (token) =>
-  API.get("/houses", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+// Guests
+export const getGuests = (reservationId) =>
+  API.get("/guests", { params: { reservationId } });
+export const createGuest = (guestData) => API.post("/guests", guestData);
+
+export default API;

@@ -12,6 +12,7 @@ import {
   Alert,
   Box
 } from '@mui/material';
+import { createHouse } from '../api/api';
 
 function CreateHouse() {
   const [form, setForm] = useState({
@@ -30,11 +31,8 @@ function CreateHouse() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/houses`, form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await createHouse(form);
       setMessage('House created successfully!');
       setError(false);
     } catch (err) {

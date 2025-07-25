@@ -14,6 +14,7 @@ import {
   Alert
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { getHouses, createReservation } from '../api/api'; 
 
 
 function CreateReservation() {
@@ -37,10 +38,7 @@ function CreateReservation() {
   useEffect(() => {
     const fetchHouses = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/houses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await getHouses();
         setHouses(data);
       } catch (err) {
         setError(true);
@@ -55,18 +53,14 @@ function CreateReservation() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reservations`, form, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setMessage('Reservation created successfully!');
-    setError(false);
+      await createReservation(form);
+      setMessage('Reservation created successfully!');
+      setError(false);
 
-    // Wait 1 second before navigating to give user feedback
-    setTimeout(() => {
-      navigate('/');
-    }, 1000);
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
     } catch (err) {
       setMessage(err.response?.data?.error || 'Something went wrong');
       setError(true);

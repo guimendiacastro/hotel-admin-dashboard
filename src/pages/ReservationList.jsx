@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getReservations } from '../api/api';
+import { getReservations, getHouses } from '../api/api';
 import axios from 'axios';
 
 import {
@@ -29,6 +29,8 @@ import {
   CalendarMonth as CalendarIcon,
   Error as ErrorIcon
 } from '@mui/icons-material';
+import { useClerk } from '@clerk/clerk-react';
+
 
 export default function ReservationList() {
   const [reservations, setReservations] = useState([]);
@@ -40,32 +42,20 @@ export default function ReservationList() {
   const [filterDate, setFilterDate] = useState('');
   const [filterMode, setFilterMode] = useState('checkin');
   const [searchQuery, setSearchQuery] = useState('');
-
-
-
+  const { signOut } = useClerk();
 
   useEffect(() => {
     const fetchReservations = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
-        if (!token) return navigate('/login');
 
-        const url = new URL(`${import.meta.env.VITE_API_BASE_URL}/api/reservations`);
-
-        if (selectedHouse) url.searchParams.append('houseId', selectedHouse);
+        const params = {};
+        if (selectedHouse) params.houseId = selectedHouse;
         if (filterDate) {
-          if (filterMode === 'checkin') {
-            url.searchParams.append('checkIn', filterDate);
-          } else {
-            url.searchParams.append('checkOut', filterDate);
-          }
+          params[filterMode === 'checkin' ? 'checkIn' : 'checkOut'] = filterDate;
         }
 
-        const { data } = await axios.get(url.toString(), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        const { data } = await getReservations(params);
         setReservations(data);
       } catch (err) {
         setError('Failed to load reservations. Please try again.');
@@ -76,10 +66,7 @@ export default function ReservationList() {
 
     const fetchHouses = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/houses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await getHouses();
         setHouses(data);
       } catch (err) {
         console.error('Failed to fetch houses', err);
@@ -89,8 +76,6 @@ export default function ReservationList() {
     fetchHouses();
     fetchReservations();
   }, [navigate, selectedHouse, filterDate, filterMode]);
-
-
 
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -123,8 +108,8 @@ export default function ReservationList() {
   }
 
   const filteredReservations = reservations.filter((r) =>
-  r.name?.toLowerCase().includes(searchQuery.toLowerCase())
-);
+    r.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -133,17 +118,16 @@ export default function ReservationList() {
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Typography variant="h6" fontWeight={600}>
             Reservations Dashboard
-          </Typography>
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={() => {
-              localStorage.removeItem('token');
-              navigate('/login', { replace: true }); // <--- this is key
-            }}
-          >
-            Sign Out
-          </Button>
+          </Typography>                  
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => {
+                signOut(() => navigate('/login', { replace: true }));
+              }}
+            >
+              Sign Out
+            </Button>
         </Toolbar>
       </AppBar>
 

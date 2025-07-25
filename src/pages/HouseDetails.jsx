@@ -14,6 +14,7 @@ import {
   Skeleton,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { getHouseById } from '../api/api'; 
 
 export default function HouseDetails() {
   const { id } = useParams();
@@ -24,10 +25,7 @@ export default function HouseDetails() {
   useEffect(() => {
     const fetchHouse = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/houses/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await getHouseById(id);
         setHouse(data);
       } catch (err) {
         console.error('Failed to fetch house:', err);

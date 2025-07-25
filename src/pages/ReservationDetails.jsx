@@ -37,23 +37,25 @@ import {
   Error as ErrorIcon,
   PersonAdd
 } from '@mui/icons-material';
+import { getReservationById, getGuests, createGuest } from '../api/api';
 
 export default function ReservationDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [reservation, setReservation] = useState(null);
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [showModal, setShowModal] = useState(false);
+
   const [guestForm, setGuestForm] = useState({
     first_name: '',
     last_name: '',
     date_of_birth: '',
     country_of_residency: '',
     nationality: '',
-    id_type: 'Passport',     
+    id_type: 'Passport',
     id_number: '',
     id_issued_by: ''
   });
@@ -61,16 +63,9 @@ export default function ReservationDetails() {
   useEffect(() => {
     const fetchReservationData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return navigate('/login');
-
         const [resData, guestData] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/reservations/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests?reservationId=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          getReservationById(id),
+          getGuests(id),
         ]);
 
         setReservation(resData.data);
@@ -83,7 +78,35 @@ export default function ReservationDetails() {
     };
 
     if (id) fetchReservationData();
-  }, [id, navigate]);
+  }, [id]);
+
+  const handleGuestChange = (e) => {
+    setGuestForm({ ...guestForm, [e.target.name]: e.target.value });
+  };
+
+  const handleGuestSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await createGuest({ ...guestForm, reservation_id: id });
+
+      setShowModal(false);
+      setGuestForm({
+        first_name: '',
+        last_name: '',
+        date_of_birth: '',
+        country_of_residency: '',
+        nationality: '',
+        id_type: 'Passport',
+        id_number: '',
+        id_issued_by: ''
+      });
+
+      const guestRes = await getGuests(id);
+      setGuests(guestRes.data);
+    } catch (err) {
+      alert('Failed to add guest: ' + (err.response?.data?.error || err.message));
+    }
+  };
 
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -104,39 +127,6 @@ export default function ReservationDetails() {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
     return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-  };
-
-  const handleGuestChange = (e) => {
-    setGuestForm({ ...guestForm, [e.target.name]: e.target.value });
-  };
-
-  const handleGuestSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/guests`,
-        { ...guestForm, reservation_id: id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setShowModal(false);
-      setGuestForm({
-        first_name: '',
-        last_name: '',
-        date_of_birth: '',
-        country_of_residency: '',
-        nationality: '',
-        id_type: 'Passport',
-        id_number: '',
-        id_issued_by: ''
-      });
-      const guestRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests?reservationId=${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setGuests(guestRes.data);
-    } catch (err) {
-      alert('Failed to add guest: ' + (err.response?.data?.error || err.message));
-    }
   };
 
   if (loading) {

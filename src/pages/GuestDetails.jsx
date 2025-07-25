@@ -10,6 +10,7 @@ import {
   Stack,
   Box
 } from '@mui/material';
+import { getGuests } from '../api/api';
 
 function GuestDetails() {
   const { id } = useParams();
@@ -19,10 +20,7 @@ function GuestDetails() {
   useEffect(() => {
     const fetchGuest = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/guests`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data } = await getGuests();
         const selected = data.find(g => g.id === parseInt(id));
         setGuest(selected);
       } catch (err) {
@@ -31,6 +29,7 @@ function GuestDetails() {
         setLoading(false);
       }
     };
+
     fetchGuest();
   }, [id]);
 
